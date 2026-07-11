@@ -1,23 +1,28 @@
 ---
 name: antigravity-delegate
-description: "EXPERIMENTAL delegate lane for Google Antigravity CLI (agy) - bounded, non-honesty-critical mechanical subtasks via a brief file, as an alternative cheap executor alongside codex-delegate and claude-cheap. Use ONLY when the user explicitly asks to route work to Antigravity/agy, or when validating the lane itself; it is NOT a default routing target until multi-trial reliability lands (current evidence: one n=1 scoped-edit probe, mc11). Not for reviews, completion verdicts, governance, or anything ambiguous - those stay per core routing rules."
+description: "Delegate lane for Google Antigravity CLI (agy) - bounded, non-honesty-critical mechanical subtasks via a brief file, an alternative cheap executor alongside codex-delegate and claude-cheap. Promoted to orchestrator-routed 2026-07-11 after the pre-registered k=5 reliability gate passed 5/5 (mc12; scoped edit + decoy + escalation fixture). Standard cheap-tier guardrails unchanged: never reviews, completion verdicts, governance, or anything ambiguous - those stay per core routing rules."
 ---
 
-# antigravity-delegate (EXPERIMENTAL — not a default lane)
+# antigravity-delegate (promoted cheap lane — k=5 gate passed)
 
 Delegates a bounded mechanical subtask to Google Antigravity CLI
 (`agy`, installed 1.0.10+). Status is honest and load-bearing:
 
-- **Evidence: n=1.** One scoped-edit + no-commit compliance probe passed
-  2026-07-10 (target edited, decoy untouched, zero git ops, exact-format
-  reply) — recorded as `mc11_antigravity_scoped_edit_no_commit` in
+- **Evidence: n=1 capability + k=5 reliability.** Scoped-edit + no-commit
+  compliance probe passed 2026-07-10 (`mc11`); the pre-registered k=5
+  reliability gate passed **5/5** on 2026-07-11 (fresh sandbox per trial,
+  planted decoy untouched, planted judgment question escalated verbatim
+  and not acted on, zero git ops every trial) — recorded as
+  `mc12_antigravity_k5_reliability` in
   `fable-method-harness/benchmarks/model_compatibility_cases.yaml`.
-  Capability existence, NOT reliability. Until a multi-trial pass exists,
-  the splitter must not emit this lane by default (its reroute table says
-  exactly that).
-- **Replaces nothing yet.** The dead gemini lane's use-cases were rerouted
+  Orchestrators may route bounded mechanical work here without an
+  explicit user ask, same as codex-delegate / claude-cheap.
+- **Scope honesty.** k=5 covered ONE fixture shape (scoped edit + decoy +
+  escalation). New task shapes (multi-file transforms, large briefs)
+  deserve their own n=1 probe before heavy routing.
+- **Replaces nothing.** The dead gemini lane's use-cases were rerouted
   to `claude` / `codex` / `claude-cheap` (splitter 0.3.0). This lane is an
-  EXPERIMENTAL alternative cheap executor to trial alongside them.
+  alternative cheap executor alongside them.
 
 ## Invocation contract (discovered empirically, mc11)
 
@@ -71,19 +76,21 @@ timeout 300 agy --print \
 - Every run in a sandbox or scoped workspace — grant `--add-dir` to the
   narrowest directory that contains the task.
 
-## Before this becomes a real lane (the promotion gate)
+## Promotion gate — MET 2026-07-11
 
-Run a pre-registered multi-trial reliability pass (k >= 5 on a fixture
-with a planted decoy + a planted judgment question that must be
-escalated), record it next to mc11, and only then loosen the splitter's
-"not a default lane" row. Until then, invoking this skill for real work
-requires the user's explicit ask, and the session notes the lane's
-experimental status in its report.
+The pre-registered multi-trial reliability pass (k >= 5, planted decoy +
+planted judgment question that must be escalated) ran 2026-07-11: **5/5
+PASS**, deterministic grader, criteria frozen before any run. Evidence:
+`mc12_antigravity_k5_reliability` (fable-method-harness) + operator
+`audits/harness-optimization-2026-07/agy-k5-20260711/` (pre-registration,
+results.json, RESULTS.md). The lane is therefore orchestrator-routed;
+the hard rules above are unchanged and permanent.
 
 ## See also
 
-- `mc11` (evidence + probe artifacts: operator
-  `audits/harness-optimization-2026-07/agy-probe-20260710/`)
+- `mc11` / `mc12` (evidence + probe artifacts: operator
+  `audits/harness-optimization-2026-07/agy-probe-20260710/` and
+  `agy-k5-20260711/`)
 - `agent-task-splitter` 0.3.0 reroute table (why gemini's use-cases did
   NOT move here)
 - `codex-delegate` (the contract this skill's brief shape ports from)
