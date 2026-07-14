@@ -37,8 +37,21 @@ pinned-model Claude lanes.
 4. Auth lives at `~/.antigravity_cockpit/credentials.json`; re-auth by
    running `agy` interactively once.
 
-`scripts/run_agy.sh` wraps all of it (bounded timeout, 10 MB log cap,
-true exit-code propagation).
+`scripts/run_agy.sh` wraps all of it: bounded timeout, 10 MB log cap,
+true exit-code propagation, agy pre-flight check, and (hardened
+2026-07-14) `--verify-file`/`--verify-sentinel` result-contract
+enforcement (exit 3 — catches a delegate claiming completion without
+producing output) plus auth/quota failure classification on nonzero
+exits (exit 4 + re-auth hint; a success is never reclassified).
+Regression suite: `tests/test_run_agy.sh` (17 cases, stub backend, incl.
+a glob-decoy case pinning that verify paths are treated literally).
+Caveats: agy may natively exit 2/3/4 — disambiguate wrapper-injected
+3/4 by the stderr line, not the number alone; the exit-4 re-auth hint
+is heuristic and can misfire on failures whose logs mention
+credential/quota words.
+Honest note: mc12's k=5 reliability gate was measured on the
+pre-hardening wrapper; the hardening is additive and a post-hardening
+n=1 smoke on the mc11 fixture passed with the verify flags exercised.
 
 ## License
 

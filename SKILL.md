@@ -43,7 +43,18 @@ Four non-obvious facts, all mandatory:
    interactively once (browser flow). Never attempt to paste OAuth codes
    non-interactively.
 
-Canonical invocation (or use `scripts/run_agy.sh`, which wraps all of it):
+Canonical invocation (or use `scripts/run_agy.sh`, which wraps all of it
+and adds: agy pre-flight check; `--verify-file <path>` /
+`--verify-sentinel <string>` result-contract enforcement — exit 3 when
+agy claims success without producing the named output (F13 "liar mode");
+auth/quota classification — exit 4 with a re-auth hint when a NONZERO agy
+exit matches credential/rate-limit signatures, never reclassifying a
+success. Hardened 2026-07-14, 17-case regression suite in
+`tests/test_run_agy.sh` incl. a glob-decoy case; caveat: agy may
+natively exit 2/3/4 — disambiguate wrapper-injected codes by the stderr
+line, not the number alone. Note mc12's k=5 was measured on the
+pre-hardening wrapper — additions are additive and a post-hardening n=1
+mc11-fixture smoke passed with the verify flags exercised):
 
 ```bash
 timeout 300 agy --print \
