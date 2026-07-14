@@ -91,7 +91,8 @@ the hard rules above are unchanged and permanent.
 - `mc11` / `mc12` (evidence + probe artifacts: operator
   `audits/harness-optimization-2026-07/agy-probe-20260710/` and
   `agy-k5-20260711/`)
-- `agent-task-splitter` 0.3.0 reroute table (why gemini's use-cases did
-  NOT move here)
+- `agent-task-splitter` 0.3.1 reroute table (why gemini's use-cases did
+  NOT move here; 0.3.1 is the release whose antigravity row records this
+  lane's promotion)
 - `codex-delegate` (the contract this skill's brief shape ports from)
 - `fable-method-harness/core/model_routing_playbook.md` (tier guardrails)
