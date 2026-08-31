@@ -37,6 +37,14 @@ pinned-model Claude lanes.
 4. Auth lives at `~/.antigravity_cockpit/credentials.json`; re-auth by
    running `agy` interactively once.
 
+## Plugin installation
+
+This repository is a Claude Code skill plugin. Its manifest lives at
+`.claude-plugin/plugin.json`, and the installable skill is mirrored under
+`skills/antigravity-delegate/SKILL.md`. The repository-root `SKILL.md` remains
+the canonical source for direct skill consumers; CI requires the two copies to
+be byte-identical.
+
 `scripts/run_agy.sh` wraps all of it: bounded timeout, 10 MB log cap,
 true exit-code propagation, agy pre-flight check, and (hardened
 2026-07-14) `--verify-file`/`--verify-sentinel` result-contract

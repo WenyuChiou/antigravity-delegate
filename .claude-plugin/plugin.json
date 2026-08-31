@@ -1,0 +1,17 @@
+{
+  "name": "antigravity-delegate",
+  "version": "0.1.0",
+  "description": "Bounded delegation to Google Antigravity CLI for mechanical, non-governance work.",
+  "author": {
+    "name": "Wenyu Chiou"
+  },
+  "homepage": "https://github.com/WenyuChiou/antigravity-delegate",
+  "repository": "https://github.com/WenyuChiou/antigravity-delegate",
+  "license": "MIT",
+  "keywords": [
+    "antigravity",
+    "delegation",
+    "multi-ai",
+    "mechanical-work"
+  ]
+}
