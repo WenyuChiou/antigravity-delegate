@@ -33,6 +33,16 @@ case "${STUB_MODE:-ok}" in
   ok_empty)    echo "DONE"; : > "$STUB_OUT"; exit 0 ;;
   ok_nosent)   echo "DONE"; printf 'result body no marker\n' > "$STUB_OUT"; exit 0 ;;
   ok_quota_in_log) echo "task mentions quota exceeded on purpose"; printf 'result SENTINEL-OK\n' > "$STUB_OUT"; exit 0 ;;
+  oversized_write)
+    set -e
+    dd if=/dev/zero bs=1024 count=12288 2>/dev/null
+    printf 'result SENTINEL-OK\n' > "$STUB_OUT"
+    exit 0 ;;
+  oversized_fail)
+    set -e
+    dd if=/dev/zero bs=1024 count=12288 2>/dev/null
+    exit 7 ;;
+  auth_required) echo "Error: authentication required" >&2; exit 1 ;;
   auth_fail)   echo "Error: IneligibleTierError - credential rejected" >&2; exit 1 ;;
   generic_fail) echo "Error: something unrelated broke" >&2; exit 1 ;;
 esac
@@ -90,6 +100,21 @@ rm -f "$OUT" "$TMP/second.md"; STUB_MODE=ok_write sh "$WRAPPER" "$BRIEF" "$WS" 6
 # T17 verify path containing a space -> 0
 SPACED="$TMP/out with space.md"
 rm -f "$SPACED"; STUB_OUT="$SPACED" STUB_MODE=ok_write sh "$WRAPPER" "$BRIEF" "$WS" 60 --verify-file "$SPACED" --verify-sentinel "SENTINEL-OK" >/dev/null 2>&1; t T17_spaced_path 0 $?
+
+# T18-20: capping the transcript must not close the producer pipe early.
+# A delegate may still need to write its result or return its real exit code
+# after logging >10 MiB. The previous `head`-only pipeline sends SIGPIPE.
+rm -f "$OUT"
+STUB_MODE=oversized_write sh "$WRAPPER" "$BRIEF" "$WS" 60 --verify-file "$OUT" --verify-sentinel "SENTINEL-OK" >/dev/null 2>&1
+t T18_oversized_success_finishes 0 $?
+LOG="${BRIEF%.md}_log.txt"
+t T19_log_stays_capped 10485760 "$(wc -c < "$LOG")"
+STUB_MODE=oversized_fail sh "$WRAPPER" "$BRIEF" "$WS" 60 >/dev/null 2>&1
+t T20_oversized_failure_preserved 7 $?
+
+# T21: current official headless docs use this unauthenticated error.
+STUB_MODE=auth_required sh "$WRAPPER" "$BRIEF" "$WS" 60 >/dev/null 2>&1
+t T21_current_auth_required_classified 4 $?
 
 echo "failures: $FAILS"
 exit "$FAILS"

@@ -16,7 +16,7 @@
 #         a delegate claiming completion without producing output);
 #       4 auth/quota failure — agy exited NONZERO and the log matches
 #         known credential/rate-limit signatures (re-auth: run `agy`
-#         interactively once; creds at ~/.antigravity_cockpit).
+#         interactively once; storage depends on installed agy version).
 #         Fail-safe direction by design: classification only ever
 #         REFINES an already-failed run — an RC=0 run is never
 #         reclassified (briefs/task text can legitimately contain words
@@ -108,7 +108,13 @@ requests." \
     --dangerously-skip-permissions \
     --print-timeout "$PRINT_TIMEOUT"
   echo $? > "$STATUS_FILE"
-} 2>&1 | head -c 10485760 > "$LOG"
+} 2>&1 | {
+  # Keep the pipe open after the 10 MiB cap. Closing it with head alone
+  # sends SIGPIPE to a verbose delegate before it writes its result or
+  # records its real status. Drain excess bytes without growing the log.
+  head -c 10485760
+  cat >/dev/null
+} > "$LOG"
 RC=$(cat "$STATUS_FILE" 2>/dev/null || echo 1)
 rm -f "$STATUS_FILE"
 tail -3 "$LOG"
@@ -119,8 +125,8 @@ if [ "$RC" -ne 0 ]; then
   # to the raw RC (safe — orchestrator still sees a failure); a false
   # match turns one failure code into another failure code (never into
   # success), so no green can be fabricated here.
-  if grep -qiE 'IneligibleTierError|UNSUPPORTED_CLIENT|invalid_grant|credentials? (rejected|invalid|expired|missing)|unauthorized|quota exceeded|rate.?limit|RESOURCE_EXHAUSTED|too many requests|error 429' "$LOG"; then
-    echo "run_agy: exit=$RC reclassified as AUTH/QUOTA failure (exit 4) — likely expired ~/.antigravity_cockpit credentials or a rate limit. Re-auth: run 'agy' interactively once. log=$LOG" >&2
+  if grep -qiE 'IneligibleTierError|UNSUPPORTED_CLIENT|invalid_grant|authentication required|credentials? (rejected|invalid|expired|missing)|unauthorized|quota exceeded|rate.?limit|RESOURCE_EXHAUSTED|too many requests|error 429' "$LOG"; then
+    echo "run_agy: exit=$RC reclassified as AUTH/QUOTA failure (exit 4) — likely missing/expired credentials or a rate limit. Re-auth: run 'agy' interactively once. log=$LOG" >&2
     exit 4
   fi
   if [ "$RC" -eq 124 ] && [ ! -s "$LOG" ]; then
