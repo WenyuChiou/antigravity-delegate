@@ -6,7 +6,7 @@ description: "Delegate lane for Google Antigravity CLI (agy) - bounded, non-hone
 # antigravity-delegate (promoted cheap lane — k=5 gate passed)
 
 Delegates a bounded mechanical subtask to Google Antigravity CLI
-(`agy`, installed 1.0.10+). Status is honest and load-bearing:
+(`agy`; the July 2026 probe used 1.0.10+). Status is honest and load-bearing:
 
 - **Evidence: n=1 capability + k=5 reliability.** Scoped-edit + no-commit
   compliance probe passed 2026-07-10 (`mc11`); the pre-registered k=5
@@ -24,13 +24,19 @@ Delegates a bounded mechanical subtask to Google Antigravity CLI
   to `claude` / `codex` / `claude-cheap` (splitter 0.3.0). This lane is an
   alternative cheap executor alongside them.
 
-## Invocation contract (discovered empirically, mc11)
+## Invocation contract (July 2026 empirical probe, mc11)
 
-Four non-obvious facts, all mandatory:
+The wrapper preserves the July invocation. Check the installed `agy --version`
+and `agy --help` before assuming this historical contract describes newer
+runtimes. The [current headless docs](https://antigravity.google/docs/cli/headless/)
+also describe JSON/schema output; the existing result-file verification remains
+mandatory for this lane. Native host loading and live compatibility are not
+established by offline wrapper tests.
 
-1. `--print` mode is **plan-only by default and exits 0 SILENTLY without
-   editing**. You MUST pass `--mode accept-edits` for the agent to touch
-   files.
+Four legacy facts behind the explicit wrapper flags:
+
+1. The July `--print` probe **exited 0 silently without editing** unless
+   `--mode accept-edits` was passed. Keep that explicit mode in this wrapper.
 2. `--dangerously-skip-permissions` is required ALONGSIDE
    `--mode accept-edits`: the default tool permission is
    `request-review`, which a non-interactive `--print` run cannot answer
@@ -38,10 +44,11 @@ Four non-obvious facts, all mandatory:
    workspace.
 3. The workspace must be granted with an **absolute path** via
    `--add-dir`.
-4. Auth lives at `~/.antigravity_cockpit/credentials.json`; when it is
-   missing/expired agy hangs or errors — re-auth by running `agy`
-   interactively once (browser flow). Never attempt to paste OAuth codes
-   non-interactively.
+4. The July probe used `~/.antigravity_cockpit/credentials.json` and could
+   hang on expired auth. Current [auth docs](https://antigravity.google/docs/cli/install)
+   describe keyring sign-in and `~/.gemini/antigravity-cli` settings. Use the
+   installed version's supported sign-in flow; never paste credentials or
+   OAuth codes into delegated non-interactive tasks.
 
 Canonical invocation (or use `scripts/run_agy.sh`, which wraps all of it
 and adds: agy pre-flight check; `--verify-file <path>` /
@@ -49,8 +56,8 @@ and adds: agy pre-flight check; `--verify-file <path>` /
 agy claims success without producing the named output (F13 "liar mode");
 auth/quota classification — exit 4 with a re-auth hint when a NONZERO agy
 exit matches credential/rate-limit signatures, never reclassifying a
-success. Hardened 2026-07-14, 17-case regression suite in
-`tests/test_run_agy.sh` incl. a glob-decoy case; caveat: agy may
+success. Hardened 2026-07-14; subsequent offline compatibility checks expanded the suite in
+`tests/test_run_agy.sh` to 21 cases, including a glob decoy and oversized log drain; caveat: agy may
 natively exit 2/3/4 — disambiguate wrapper-injected codes by the stderr
 line, not the number alone. Note mc12's k=5 was measured on the
 pre-hardening wrapper — additions are additive and a post-hardening n=1
@@ -79,8 +86,10 @@ timeout 300 agy --print \
 - **Brief-first**: write `.ai/agy_task_<NNN>_<slug>.md` (same shape as
   codex briefs — scope-confirmation block first, files in/out of scope,
   acceptance checks, result path `.ai/agy_result_<NNN>_<slug>.md`).
-- **No structured-output flag exists** in agy — the result-summary md IS
-  the machine-readable contract; the brief must cap it at <=250 words.
+- **Retain the result-summary Markdown contract** and cap it at <=250 words.
+  The July workflow did not use structured output; current Google docs now
+  list `--output-format` and `--json-schema`. This wrapper does not request
+  them, and generated summaries never replace supervisor verification.
 - **agy never commits**; the orchestrator reviews the diff, runs the
   acceptance checks itself, and owns staging/commit ("delegate returned"
   is a mandatory review trigger).
@@ -107,3 +116,13 @@ the hard rules above are unchanged and permanent.
   lane's promotion)
 - `codex-delegate` (the contract this skill's brief shape ports from)
 - `fable-method-harness/core/model_routing_playbook.md` (tier guardrails)
+
+## Package surfaces
+
+- Claude marketplace: `.claude-plugin/plugin.json` identifies the plugin.
+- Portable skill: `skills/antigravity-delegate/` bundles this skill and its wrapper.
+- Google native plugin: root `plugin.json` is a minimal name/description marker
+  for the same skills directory, following [Google's plugin schema](https://antigravity.google/docs/plugins/).
+  Offline schema/topology checks do not establish actual native loading.
+
+Changing the host does not broaden the hard rules or permit unbounded delegation.
