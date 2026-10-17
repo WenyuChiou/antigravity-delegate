@@ -48,7 +48,7 @@ root `plugin.json` marker, whose documented `skills/*/SKILL.md` discovery is che
 offline. The native marker declares only name/description and adds no hooks,
 servers, settings, or permission grants. Actual native agy loading is unverified.
 
-Stable Claude manifest: `0.1.0`; proposed unreleased patch: `0.1.1`.
+Stable Claude manifest: `0.1.0`; proposed unreleased patch: `0.1.2`.
 See [compatibility and sources](COMPATIBILITY.md) for current-doc differences
 and verification limits.
 
@@ -57,9 +57,12 @@ true exit-code propagation, agy pre-flight check, and (hardened
 2026-07-14) `--verify-file`/`--verify-sentinel` result-contract
 enforcement (exit 3 — catches a delegate claiming completion without
 producing output) plus auth/quota failure classification on nonzero
-exits (exit 4 + re-auth hint; a success is never reclassified).
-Regression suite: `tests/test_run_agy.sh` (21 cases, stub backend, including
-literal/glob verification, oversized transcripts, and current authentication wording).
+exits (exit 4 + re-auth hint; a success is never reclassified), plus an
+optional `--model <id>` passed through to `agy --model` (ids: `agy models`;
+without it agy's own default applies, and the wrapper never picks a model).
+Regression suite: `tests/test_run_agy.sh` (33 cases, stub backend, including
+literal/glob verification, oversized transcripts, current authentication wording,
+and `--model` pass-through).
 
 Run both offline suites:
 

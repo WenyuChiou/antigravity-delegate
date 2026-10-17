@@ -1,8 +1,8 @@
 # Package and runtime compatibility
 
-Checked 2026-10-02. Baseline source `a9c60d4`, Claude manifest `0.1.0`;
-proposed unreleased Claude manifest `0.1.1`. The Google-native root marker is
-capability-minimal and has no version field under the documented Google schema.
+Checked 2026-10-02 (`--model` rechecked 2026-10-17). Baseline source
+`a9c60d4`, Claude manifest `0.1.0`; proposed unreleased Claude manifest
+`0.1.2`. The Google-native root marker is capability-minimal and has no version field under the documented Google schema.
 
 ## Three independent surfaces
 
@@ -49,11 +49,20 @@ python -m pytest -q
 sh tests/test_run_agy.sh
 ```
 
-The shell suite has 21 synthetic cases. Exit 4 remains heuristic and only
+The shell suite has 33 synthetic cases. Exit 4 remains heuristic and only
 refines an already-failed run. Classification inspects the capped transcript,
 so a signature appearing only after the cap may be missed; the underlying
 failure status remains a failure. Native exit-code collisions are still
 identified by the wrapper's diagnostic text, not the number alone.
+
+## 2026-10-17: `--model` pass-through (proposed `0.1.2`)
+
+Installed `agy` 1.4.0 on Windows lists `--model` ("Model for the current CLI
+session") in `agy --help`, and `agy models` lists the available ids. The
+wrapper forwards `--model <id>` unchanged and adds nothing when the flag is
+absent, so agy's own default still applies. The synthetic suite covers the
+argument handling; it does not prove that a given id is available to a given
+account.
 
 ## Primary sources
 

@@ -43,6 +43,8 @@ case "${STUB_MODE:-ok}" in
     dd if=/dev/zero bs=1024 count=12288 2>/dev/null
     exit 7 ;;
   auth_required) echo "Error: authentication required" >&2; exit 1 ;;
+  record_args) printf '%s\n' "$@" > "$STUB_ARGS"; echo "DONE"; exit 0 ;;
+  record_write) printf '%s\n' "$@" > "$STUB_ARGS"; printf 'result body SENTINEL-OK\n' > "$STUB_OUT"; echo "DONE"; exit 0 ;;
   auth_fail)   echo "Error: IneligibleTierError - credential rejected" >&2; exit 1 ;;
   generic_fail) echo "Error: something unrelated broke" >&2; exit 1 ;;
 esac
@@ -115,6 +117,37 @@ t T20_oversized_failure_preserved 7 $?
 # T21: current official headless docs use this unauthenticated error.
 STUB_MODE=auth_required sh "$WRAPPER" "$BRIEF" "$WS" 60 >/dev/null 2>&1
 t T21_current_auth_required_classified 4 $?
+
+# T22-T27b: --model pass-through. The stub records one argv entry per line.
+ARGS="$TMP/agy_args.txt"
+export STUB_ARGS="$ARGS"
+# model_after_flag: print the argv entry right after --model (empty if none).
+model_after_flag() { awk 'prev == "--model" { print; exit } { prev = $0 }' "$ARGS"; }
+# T22 --model forwarded verbatim as `--model <id>` -> 0
+rm -f "$ARGS"; STUB_MODE=record_args sh "$WRAPPER" "$BRIEF" "$WS" 60 --model gemini-3.8-flash-low >/dev/null 2>&1
+t T22_model_forwarded 0 $?
+[ "$(model_after_flag)" = "gemini-3.8-flash-low" ]; t T22b_model_value_verbatim 0 $?
+# T23 no --model -> agy gets no --model, so its own default applies
+rm -f "$ARGS"; STUB_MODE=record_args sh "$WRAPPER" "$BRIEF" "$WS" 60 >/dev/null 2>&1
+t T23_no_model_runs 0 $?
+grep -qx -- '--model' "$ARGS"; t T23b_no_model_flag_passed 1 $?
+# T24 --model with no value -> 2, agy never runs
+rm -f "$ARGS"; STUB_MODE=record_args sh "$WRAPPER" "$BRIEF" "$WS" 60 --model >/dev/null 2>&1
+t T24_model_missing_value 2 $?
+[ ! -e "$ARGS" ]; t T24b_agy_not_run 0 $?
+# T25 flag-shaped value is refused, not swallowed -> 2. It is the LAST
+# argument, so without the guard agy would run with model "--verify-sentinel".
+rm -f "$ARGS"; STUB_MODE=record_args sh "$WRAPPER" "$BRIEF" "$WS" 60 --model --verify-sentinel >/dev/null 2>&1
+t T25_model_flag_shaped_value 2 $?
+[ ! -e "$ARGS" ]; t T25b_agy_not_run 0 $?
+# T26 --model mixed with verify flags, no timeout positional -> 0, still forwarded
+rm -f "$OUT" "$ARGS"; STUB_MODE=record_write sh "$WRAPPER" "$BRIEF" "$WS" --verify-file "$OUT" --model claude-sonnet-5-5-low --verify-sentinel "SENTINEL-OK" >/dev/null 2>&1
+t T26_model_with_verify_flags 0 $?
+[ "$(model_after_flag)" = "claude-sonnet-5-5-low" ]; t T26b_model_forwarded_with_verify 0 $?
+# T27 auth/quota failure with --model -> 4, plus the retry-without-model hint
+STUB_MODE=auth_fail sh "$WRAPPER" "$BRIEF" "$WS" 60 --model some-id >/dev/null 2>"$TMP/err.txt"
+t T27_auth_with_model 4 $?
+grep -q 'retry without --model' "$TMP/err.txt"; t T27b_model_retry_hint 0 $?
 
 echo "failures: $FAILS"
 exit "$FAILS"

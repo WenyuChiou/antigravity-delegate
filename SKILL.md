@@ -56,8 +56,10 @@ and adds: agy pre-flight check; `--verify-file <path>` /
 agy claims success without producing the named output (F13 "liar mode");
 auth/quota classification — exit 4 with a re-auth hint when a NONZERO agy
 exit matches credential/rate-limit signatures, never reclassifying a
-success. Hardened 2026-07-14; subsequent offline compatibility checks expanded the suite in
-`tests/test_run_agy.sh` to 21 cases, including a glob decoy and oversized log drain; caveat: agy may
+success; optional `--model <id>` passed through as `agy --model <id>`.
+Hardened 2026-07-14; subsequent offline compatibility checks expanded the suite in
+`tests/test_run_agy.sh` to 33 cases, including a glob decoy, oversized log drain and
+`--model` pass-through; caveat: agy may
 natively exit 2/3/4 — disambiguate wrapper-injected codes by the stderr
 line, not the number alone. Note mc12's k=5 was measured on the
 pre-hardening wrapper — additions are additive and a post-hardening n=1
@@ -72,6 +74,15 @@ timeout 300 agy --print \
   --print-timeout 240s \
   --log-file .ai/agy_log_<NNN>_<slug>.txt
 ```
+
+**Model choice.** Without `--model`, agy's own default model runs; the
+wrapper never picks one. To choose per delegation, list the ids with
+`agy models` and pass `run_agy.sh <brief> <workspace> [timeout] --model <id>`
+(raw CLI: `agy --print ... --model <id>`). The wrapper refuses a missing or
+flag-shaped value with exit 2 and names `model=<id|default>` on its status,
+verify-failure and auth/quota lines; on exit 4 with `--model` it also says to
+retry without it, since an id the account cannot use can look like an auth
+error. Ids and their cost tiers change with the installed agy version.
 
 ## Hard rules (same spine as codex-delegate; never optional)
 
