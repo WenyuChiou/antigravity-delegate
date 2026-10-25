@@ -1,6 +1,22 @@
 # Changelog
 
-## Unreleased
+## [0.1.3] - 2026-10-25
+
+- Add independent optional `--effort <level>` to both wrapper entrypoints;
+  it works alone or with `--model`, without changing native defaults or
+  global settings. The native CLI validates supported levels for each model.
+- Report requested effort alongside model in completion, verification and
+  auth/quota diagnostics; retain timeouts, transcript cap, permissions,
+  output checks and failure propagation.
+- Cover Argon model selection plus effort with a synthetic backend, including
+  absent/malformed values, flag order, repeated flags and native failures.
+  Real `agy` 1.4.7 metadata lists Argon; no generation or reliability claim
+  is made for Argon.
+- Publish the previously accepted model forwarding and compatibility changes
+  below together with this patch; distinguish historical audit observations
+  from the current release.
+
+## Historical patch notes
 
 ### Proposed manifest `0.1.2`
 
@@ -16,8 +32,8 @@
 
 ### Proposed manifest `0.1.1`
 
-Proposed Claude plugin manifest `0.1.1`; stable remains `0.1.0`. No tag,
-release, installation, or marketplace publication is part of this patch.
+At the time of this proposal, the stable manifest remained `0.1.0`; no tag,
+release, installation or marketplace publication was part of that patch.
 
 - Keep the 10 MiB transcript cap while draining excess output, so verbose
   delegates can finish result writes and preserve their true exit status.

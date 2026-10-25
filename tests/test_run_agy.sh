@@ -16,7 +16,7 @@
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-WRAPPER="$HERE/../scripts/run_agy.sh"
+WRAPPER="${WRAPPER_UNDER_TEST:-$HERE/../scripts/run_agy.sh}"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -45,6 +45,7 @@ case "${STUB_MODE:-ok}" in
   auth_required) echo "Error: authentication required" >&2; exit 1 ;;
   record_args) printf '%s\n' "$@" > "$STUB_ARGS"; echo "DONE"; exit 0 ;;
   record_write) printf '%s\n' "$@" > "$STUB_ARGS"; printf 'result body SENTINEL-OK\n' > "$STUB_OUT"; echo "DONE"; exit 0 ;;
+  effort_fail) printf '%s\n' "$@" > "$STUB_ARGS"; echo "model does not support requested reasoning effort" >&2; exit 7 ;;
   auth_fail)   echo "Error: IneligibleTierError - credential rejected" >&2; exit 1 ;;
   generic_fail) echo "Error: something unrelated broke" >&2; exit 1 ;;
 esac
@@ -148,6 +149,66 @@ t T26_model_with_verify_flags 0 $?
 STUB_MODE=auth_fail sh "$WRAPPER" "$BRIEF" "$WS" 60 --model some-id >/dev/null 2>"$TMP/err.txt"
 t T27_auth_with_model 4 $?
 grep -q 'retry without --model' "$TMP/err.txt"; t T27b_model_retry_hint 0 $?
+
+# Effort feature-positive cases fail before --effort exists. Bad-argument and
+# absent-flag cases also preserve fail-closed/default behavior; those are
+# preservation checks rather than claims that every new case failed pre-fix.
+effort_after_flag() { if [ -f "$ARGS" ]; then awk 'prev == "--effort" { print; exit } { prev = $0 }' "$ARGS"; fi; }
+flag_count() { if [ -f "$ARGS" ]; then grep -cx -- "$1" "$ARGS"; else printf '0\n'; fi; }
+rm -f "$ARGS"
+STUB_MODE=record_args sh "$WRAPPER" "$BRIEF" "$WS" 60 --effort medium >"$TMP/effort-status.txt" 2>&1
+t T28_effort_alone 0 $?
+[ "$(effort_after_flag)" = medium ]; t T28b_effort_value 0 $?
+t T28c_effort_does_not_add_model 0 "$(flag_count --model)"
+grep -q 'effort=medium' "$TMP/effort-status.txt"; t T28d_requested_effort_label 0 $?
+
+rm -f "$ARGS"
+STUB_MODE=record_args sh "$WRAPPER" "$BRIEF" "$WS" 60 >/dev/null 2>&1
+t T29_default_run 0 $?
+t T29b_no_effort_override 0 "$(flag_count --effort)"
+
+rm -f "$OUT" "$ARGS"
+STUB_MODE=record_write sh "$WRAPPER" "$BRIEF" "$WS" --verify-file "$OUT" --model gemini-4-argon-high --effort high --verify-sentinel SENTINEL-OK >/dev/null 2>&1
+t T30_argon_and_effort_with_verification 0 $?
+[ -f "$ARGS" ] && [ "$(model_after_flag)" = gemini-4-argon-high ]; t T30b_argon_model_verbatim 0 $?
+[ "$(effort_after_flag)" = high ]; t T30c_effort_with_model 0 $?
+t T30d_one_model_pair 1 "$(flag_count --model)"
+t T30e_one_effort_pair 1 "$(flag_count --effort)"
+
+rm -f "$ARGS"
+STUB_MODE=record_args sh "$WRAPPER" "$BRIEF" "$WS" 60 --effort >/dev/null 2>&1
+t T31_effort_missing_value 2 $?
+[ ! -e "$ARGS" ]; t T31b_missing_effort_never_runs 0 $?
+STUB_MODE=record_args sh "$WRAPPER" "$BRIEF" "$WS" 60 --effort --model gemini-4-argon-high >/dev/null 2>&1
+t T32_effort_flag_shaped_value 2 $?
+[ ! -e "$ARGS" ]; t T32b_flag_shaped_effort_never_runs 0 $?
+STUB_MODE=record_args sh "$WRAPPER" "$BRIEF" "$WS" 60 --effort '' >/dev/null 2>&1
+t T33_empty_effort_value 2 $?
+[ ! -e "$ARGS" ]; t T33b_empty_effort_never_runs 0 $?
+
+rm -f "$ARGS"
+STUB_MODE=record_args sh "$WRAPPER" "$BRIEF" "$WS" 60 --effort low --model gemini-4-argon-low >/dev/null 2>&1
+t T34_effort_before_model 0 $?
+[ -f "$ARGS" ] && [ "$(model_after_flag)" = gemini-4-argon-low ]; t T34b_reverse_argon_model 0 $?
+[ "$(effort_after_flag)" = low ]; t T34c_reverse_effort 0 $?
+rm -f "$ARGS"
+STUB_MODE=record_args sh "$WRAPPER" "$BRIEF" "$WS" 60 --effort low --effort high >/dev/null 2>&1
+t T35_repeated_effort_runs 0 $?
+[ "$(effort_after_flag)" = high ]; t T35b_last_effort_wins 0 $?
+t T35c_no_duplicate_effort_pairs 1 "$(flag_count --effort)"
+
+rm -f "$ARGS"
+STUB_MODE=effort_fail sh "$WRAPPER" "$BRIEF" "$WS" 60 --model gemini-4-argon-high --effort max >/dev/null 2>&1
+t T36_native_effort_error_preserved 7 $?
+[ "$(effort_after_flag)" = max ]; t T36b_native_validates_model_support 0 $?
+STUB_MODE=auth_fail sh "$WRAPPER" "$BRIEF" "$WS" 60 --model gemini-4-argon-high --effort high >/dev/null 2>"$TMP/effort-auth.txt"
+t T37_auth_classification_unchanged 4 $?
+grep -q 'effort=high' "$TMP/effort-auth.txt"; t T37b_auth_effort_label 0 $?
+
+rm -f "$ARGS"
+STUB_MODE=record_args sh "$WRAPPER" "$BRIEF" "$WS" 60 --effort 'high; literal value' >/dev/null 2>&1
+t T38_effort_argument_is_data 0 $?
+[ "$(effort_after_flag)" = 'high; literal value' ]; t T38b_effort_single_argv_entry 0 $?
 
 echo "failures: $FAILS"
 exit "$FAILS"

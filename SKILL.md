@@ -56,10 +56,10 @@ and adds: agy pre-flight check; `--verify-file <path>` /
 agy claims success without producing the named output (F13 "liar mode");
 auth/quota classification — exit 4 with a re-auth hint when a NONZERO agy
 exit matches credential/rate-limit signatures, never reclassifying a
-success; optional `--model <id>` passed through as `agy --model <id>`.
+success; independent optional `--model <id>` and `--effort <level>` overrides.
 Hardened 2026-07-14; subsequent offline compatibility checks expanded the suite in
-`tests/test_run_agy.sh` to 33 cases, including a glob decoy, oversized log drain and
-`--model` pass-through; caveat: agy may
+`tests/test_run_agy.sh`, including a glob decoy, oversized log drain and
+model/effort pass-through; caveat: agy may
 natively exit 2/3/4 — disambiguate wrapper-injected codes by the stderr
 line, not the number alone. Note mc12's k=5 was measured on the
 pre-hardening wrapper — additions are additive and a post-hardening n=1
@@ -83,6 +83,25 @@ flag-shaped value with exit 2 and names `model=<id|default>` on its status,
 verify-failure and auth/quota lines; on exit 4 with `--model` it also says to
 retry without it, since an id the account cannot use can look like an auth
 error. Ids and their cost tiers change with the installed agy version.
+
+**Effort choice.** Pass `--effort <level>` independently or alongside
+`--model`; omit either flag to leave that native setting unchanged.
+The wrapper rejects missing, empty or flag-shaped values with exit 2 and
+forwards other values unchanged. Check `agy --help` for levels and
+`agy models` for model ids; the native CLI decides model-specific support.
+For example, where available:
+
+```bash
+sh scripts/run_agy.sh /absolute/task.md /absolute/workspace 300 \
+  --model gemini-4-argon-high --effort high
+```
+
+This is a per-call request, not a global settings change. The status labels
+`model=<id|default>` and `effort=<level|default>` describe requested overrides,
+not an observed effective configuration. Google documents this distinction in
+the [effort command guide](https://antigravity.google/docs/cli/commands/effort).
+Argon selection is not a rerun of the July reliability gate or evidence of
+its availability, cost, or task quality for a particular account.
 
 ## Hard rules (same spine as codex-delegate; never optional)
 

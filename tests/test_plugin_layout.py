@@ -23,7 +23,7 @@ def test_claude_plugin_manifest_and_skill_layout_are_installable():
     installed_wrapper = ROOT / "skills" / "antigravity-delegate" / "scripts" / "run_agy.sh"
 
     assert manifest["name"] == "antigravity-delegate"
-    assert manifest["version"] == "0.1.2"
+    assert manifest["version"] == "0.1.3"
     assert skill_path.is_file()
     assert skill_path.read_bytes() == (ROOT / "SKILL.md").read_bytes()
     assert installed_wrapper.is_file()
