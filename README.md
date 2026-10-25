@@ -48,7 +48,7 @@ root `plugin.json` marker, whose documented `skills/*/SKILL.md` discovery is che
 offline. The native marker declares only name/description and adds no hooks,
 servers, settings, or permission grants. Actual native agy loading is unverified.
 
-Stable Claude manifest: `0.1.0`; proposed unreleased patch: `0.1.2`.
+Claude plugin version: `0.1.3`.
 See [compatibility and sources](COMPATIBILITY.md) for current-doc differences
 and verification limits.
 
@@ -58,11 +58,23 @@ true exit-code propagation, agy pre-flight check, and (hardened
 enforcement (exit 3 — catches a delegate claiming completion without
 producing output) plus auth/quota failure classification on nonzero
 exits (exit 4 + re-auth hint; a success is never reclassified), plus an
-optional `--model <id>` passed through to `agy --model` (ids: `agy models`;
-without it agy's own default applies, and the wrapper never picks a model).
-Regression suite: `tests/test_run_agy.sh` (33 cases, stub backend, including
+independent optional `--model <id>` and `--effort <level>` overrides.
+Omitted flags leave the corresponding native settings unchanged.
+Regression suite: `tests/test_run_agy.sh` (stub backend, including
 literal/glob verification, oversized transcripts, current authentication wording,
-and `--model` pass-through).
+and model/effort pass-through).
+
+For example, select an available Argon model and request effort for this call:
+
+```bash
+sh scripts/run_agy.sh /absolute/task.md /absolute/workspace 300 --model gemini-4-argon-high --effort high
+```
+
+Check `agy models` for model ids and `agy --help` for effort levels.
+The native CLI validates which levels the selected model supports; the wrapper
+does not maintain a whitelist or change global settings. Diagnostic labels
+show requested overrides, not the effective native configuration.
+This argument-forwarding example is not a live Argon reliability or cost test.
 
 Run both offline suites:
 

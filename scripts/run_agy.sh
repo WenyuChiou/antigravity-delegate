@@ -9,9 +9,10 @@
 #
 # Usage: run_agy.sh <absolute-brief-path> <absolute-workspace-dir> [timeout-sec>30]
 #                   [--verify-file <path>]... [--verify-sentinel <string>]
-#                   [--model <id>]
+#                   [--model <id>] [--effort <level>]
 # --model passes `agy --model <id>` (ids: `agy models`); without it agy's
 # own default model applies. The wrapper never picks a model itself.
+# --effort is an independent per-call override; agy validates model support.
 # Exit: agy's (or timeout's, e.g. 124) exit code;
 #       2 usage/environment error (bad args, missing brief/workspace/agy);
 #       3 verify failed — agy exited 0 but a --verify-file output is
@@ -34,7 +35,7 @@ set -u
 
 BRIEF="${1:-}"; WS="${2:-}"
 if [ -z "$BRIEF" ] || [ -z "$WS" ]; then
-  echo "usage: run_agy.sh <absolute-brief-path> <absolute-workspace-dir> [timeout-sec>30] [--verify-file <path>]... [--verify-sentinel <string>] [--model <id>]" >&2
+  echo "usage: run_agy.sh <absolute-brief-path> <absolute-workspace-dir> [timeout-sec>30] [--verify-file <path>]... [--verify-sentinel <string>] [--model <id>] [--effort <level>]" >&2
   exit 2
 fi
 shift 2
@@ -54,6 +55,7 @@ fi
 VERIFY_FILES=""
 VERIFY_SENTINEL=""
 AGY_MODEL=""
+AGY_EFFORT=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --verify-file)
@@ -72,6 +74,12 @@ while [ $# -gt 0 ]; do
         ""|-*) echo "--model needs a model id (see 'agy models')" >&2; exit 2 ;;
       esac
       AGY_MODEL="$2"
+      shift 2 ;;
+    --effort)
+      case "${2:-}" in
+        ""|-*) echo "--effort needs a level (see 'agy --help')" >&2; exit 2 ;;
+      esac
+      AGY_EFFORT="$2"
       shift 2 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -110,10 +118,13 @@ PRINT_TIMEOUT="$((SECS - 30))s"
 # temp file instead (the run_codex.sh port initially regressed this).
 STATUS_FILE="${LOG}.status.$$"
 # Flags are fully parsed, so the positional list is free to carry the
-# optional --model pair (POSIX sh has no arrays).
+# independent override pairs (POSIX sh has no arrays).
 set --
-[ -n "$AGY_MODEL" ] && set -- --model "$AGY_MODEL"
+[ -n "$AGY_MODEL" ] && set -- "$@" --model "$AGY_MODEL"
+[ -n "$AGY_EFFORT" ] && set -- "$@" --effort "$AGY_EFFORT"
+# Labels describe requested overrides, not the effective native configuration.
 MODEL_LABEL="${AGY_MODEL:-default}"
+EFFORT_LABEL="${AGY_EFFORT:-default}"
 {
   timeout "$SECS" "$AGY_BIN" --print \
     "Read $BRIEF in this workspace and execute it verbatim. Follow its scope
@@ -144,7 +155,7 @@ if [ "$RC" -ne 0 ]; then
   # match turns one failure code into another failure code (never into
   # success), so no green can be fabricated here.
   if grep -qiE 'IneligibleTierError|UNSUPPORTED_CLIENT|invalid_grant|authentication required|credentials? (rejected|invalid|expired|missing)|unauthorized|quota exceeded|rate.?limit|RESOURCE_EXHAUSTED|too many requests|error 429' "$LOG"; then
-    echo "run_agy: exit=$RC reclassified as AUTH/QUOTA failure (exit 4) — likely missing/expired credentials or a rate limit. Re-auth: run 'agy' interactively once. model=$MODEL_LABEL log=$LOG" >&2
+    echo "run_agy: exit=$RC reclassified as AUTH/QUOTA failure (exit 4) — likely missing/expired credentials or a rate limit. Re-auth: run 'agy' interactively once. model=$MODEL_LABEL effort=$EFFORT_LABEL log=$LOG" >&2
     if [ -n "$AGY_MODEL" ]; then
       echo "run_agy: --model $AGY_MODEL was given; an id this account cannot use can fail the same way — retry without --model before re-authenticating." >&2
     fi
@@ -156,7 +167,7 @@ if [ "$RC" -ne 0 ]; then
     # documented auth-expiry hang. Hint, but do NOT reclassify.
     echo "run_agy: timeout with an empty log — either the task outgrew ${SECS}s or agy is hanging on expired auth; check by running 'agy' interactively once." >&2
   fi
-  echo "run_agy: exit=$RC model=$MODEL_LABEL log=$LOG (review the diff + run acceptance checks yourself before staging)"
+  echo "run_agy: exit=$RC model=$MODEL_LABEL effort=$EFFORT_LABEL log=$LOG (review the diff + run acceptance checks yourself before staging)"
   exit "$RC"
 fi
 
@@ -176,11 +187,11 @@ if [ -n "$VERIFY_FILES" ]; then
   for VF in $VERIFY_FILES; do
     IFS=$OLDIFS
     if [ ! -s "$VF" ]; then
-      echo "run_agy: VERIFY FAILED (exit 3) — agy exited 0 but expected output is missing or empty: $VF (model=$MODEL_LABEL)" >&2
+      echo "run_agy: VERIFY FAILED (exit 3) — agy exited 0 but expected output is missing or empty: $VF (model=$MODEL_LABEL effort=$EFFORT_LABEL)" >&2
       exit 3
     fi
     if [ -n "$VERIFY_SENTINEL" ] && ! grep -qF "$VERIFY_SENTINEL" "$VF"; then
-      echo "run_agy: VERIFY FAILED (exit 3) — sentinel '$VERIFY_SENTINEL' not found in: $VF (model=$MODEL_LABEL)" >&2
+      echo "run_agy: VERIFY FAILED (exit 3) — sentinel '$VERIFY_SENTINEL' not found in: $VF (model=$MODEL_LABEL effort=$EFFORT_LABEL)" >&2
       exit 3
     fi
     IFS='
@@ -190,5 +201,5 @@ if [ -n "$VERIFY_FILES" ]; then
   IFS=$OLDIFS
 fi
 
-echo "run_agy: exit=$RC model=$MODEL_LABEL log=$LOG (review the diff + run acceptance checks yourself before staging)"
+echo "run_agy: exit=$RC model=$MODEL_LABEL effort=$EFFORT_LABEL log=$LOG (review the diff + run acceptance checks yourself before staging)"
 exit "$RC"
